@@ -1,1 +1,1 @@
-# No external dependencies required (uses built-in sqlite3 and tkinter)
+reportlab>=4.0

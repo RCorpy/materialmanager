@@ -1,4 +1,6 @@
 import sqlite3
+import shutil
+import os
 from datetime import datetime
 
 DB_NAME = "materials.db"
@@ -258,3 +260,24 @@ def get_next_order_id():
     row = cursor.fetchone()
     conn.close()
     return row[0] if row and row[0] else 1
+
+def backup_database(destination_folder=None):
+    """
+    Creates a backup of the current database.
+    If destination_folder is None, saves it in the current directory with timestamp.
+    Returns the path of the backup file.
+    """
+    if not os.path.exists(DB_NAME):
+        raise FileNotFoundError(f"{DB_NAME} does not exist.")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_name = f"materials_backup_{timestamp}.db"
+
+    if destination_folder:
+        os.makedirs(destination_folder, exist_ok=True)
+        backup_path = os.path.join(destination_folder, backup_name)
+    else:
+        backup_path = backup_name
+
+    shutil.copy2(DB_NAME, backup_path)
+    return backup_path
