@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import database
 from datetime import datetime
-
+from ui.print_order import print_orders  # note the plural
 
 class ManufacturingOrderFrame(tk.Toplevel):
     def __init__(self, parent, controller):
@@ -14,7 +14,7 @@ class ManufacturingOrderFrame(tk.Toplevel):
         # --- State ---
         self.selected_product_id = None
         self.selected_product_name = None
-        self.formula_table = []  # list of dicts {id, name, qty} (always per-unit)
+        self.formula_table = []  # per-unit
         self.selected_order_id = None
 
         # --- Main layout ---
@@ -64,7 +64,7 @@ class ManufacturingOrderFrame(tk.Toplevel):
         tk.Button(left_frame, text="Save Manufacturing Order", command=self.save_order).pack(pady=6)
 
         # -----------------------------
-        # RIGHT SIDE: Past Orders
+        # RIGHT SIDE: Past Orders + Print Controls
         # -----------------------------
         top_right_frame = tk.Frame(right_frame)
         top_right_frame.pack(fill=tk.X, pady=4)
@@ -77,7 +77,8 @@ class ManufacturingOrderFrame(tk.Toplevel):
         self.to_id_entry = tk.Entry(top_right_frame, width=6)
         self.to_id_entry.pack(side=tk.LEFT, padx=2)
 
-        tk.Button(top_right_frame, text="Print Orders", command=self.print_orders).pack(side=tk.LEFT, padx=6)
+        tk.Button(top_right_frame, text="Print Orders", command=self.print_orders_range).pack(pady=4)
+
 
         tk.Label(right_frame, text="Past Manufacturing Orders:").pack(anchor="w")
         self.orders_listbox = tk.Listbox(right_frame, height=25)
@@ -131,7 +132,6 @@ class ManufacturingOrderFrame(tk.Toplevel):
         for oid, pname, units, ts in database.get_orders():
             ts_fmt = self._format_date_for_display(ts)
             self.orders_listbox.insert(tk.END, f"{oid} - {pname} ({units} units) [{ts_fmt}]")
-
 
     def on_order_select(self, event=None):
         sel = self.orders_listbox.curselection()
@@ -199,19 +199,53 @@ class ManufacturingOrderFrame(tk.Toplevel):
             self.order_info_var.set(f"Next Order #{next_id}")
 
     # -----------------------------
-    # Print orders (future use)
+    # Print multiple orders
     # -----------------------------
-    def print_orders(self):
-        from_id = self.from_id_entry.get().strip()
-        to_id = self.to_id_entry.get().strip()
+    def print_orders_range(self):
+        from_text = self.from_id_entry.get().strip()
+        to_text = self.to_id_entry.get().strip()
 
-        if from_id and to_id:
-            messagebox.showinfo("Print Orders", f"Printing orders from {from_id} to {to_id}")
-        elif self.selected_order_id:
-            messagebox.showinfo("Print Orders", f"Printing order #{self.selected_order_id}")
-        else:
-            messagebox.showerror("Error", "Select an order or enter a range")
-        self.lift()
+        if from_text and to_text:
+            try:
+                from_id = int(from_text)
+                to_id = int(to_text)
+                if from_id > to_id:
+                    messagebox.showerror("Error", "'From ID' cannot be greater than 'To ID'")
+                    return
+                order_ids = list(range(from_id, to_id + 1))
+            except ValueError:
+                messagebox.showerror("Error", "Please enter valid numbers for From and To")
+                return
+        elif from_text:
+            try:
+                order_ids = [int(from_text)]
+            except ValueError:
+                messagebox.showerror("Error", "Enter a valid numeric ID")
+                return
+        elif to_text:
+            try:
+                order_ids = [int(to_text)]
+            except ValueError:
+                messagebox.showerror("Error", "Enter a valid numeric ID")
+                return
+        else:  # Both empty
+            if self.selected_order_id:
+                order_ids = [self.selected_order_id]
+            else:
+                orders = database.get_orders()
+                if not orders:
+                    messagebox.showinfo("Info", "No orders available")
+                    return
+                last_order_id = orders[0][0]  # assuming descending by date
+                order_ids = [last_order_id]
+
+        from ui.print_order import print_orders
+        print_orders(order_ids)
+
+
+    # -----------------------------
+    # Date formatting helper
+    # -----------------------------
 
     def _format_date_for_display(self, ts):
         """Return ts as DD-MM-YYYY if possible, otherwise sensible fallback."""
