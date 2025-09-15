@@ -24,7 +24,7 @@ class ProductListFrame(tk.LabelFrame):
     def refresh(self):
         filter_text = self.search_var.get() or ""
         self.listbox.delete(0, tk.END)
-        for mid, mname in database.get_materials():
+        for mid, mname, identifier in database.get_materials():
             if filter_text.lower() in mname.lower():
                 self.listbox.insert(tk.END, f"{mid} - {mname}")
 

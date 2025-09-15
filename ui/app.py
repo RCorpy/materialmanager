@@ -5,6 +5,8 @@ from .product_list import ProductListFrame
 from .ingredient_list import IngredientListFrame
 from .formula_editor import FormulaEditorFrame
 from .save_bar import SaveBar
+from .manufacturing_order import ManufacturingOrderFrame
+
 
 
 class Controller:
@@ -34,6 +36,8 @@ def run_app():
     add_material = AddMaterialFrame(root, controller)
     add_material.pack(fill=tk.X, padx=10, pady=5)
     controller.register("add_material", add_material)
+    tk.Button(root, text="Create Manufacturing Order", command=lambda: ManufacturingOrderFrame(root, controller)).pack(pady=5)
+
 
     # Middle section
     mid = tk.Frame(root)
