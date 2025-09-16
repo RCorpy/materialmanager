@@ -1,5 +1,6 @@
 import tkinter as tk
 import database
+from tkinter import font
 from .add_material import AddMaterialFrame
 from .product_list import ProductListFrame
 from .ingredient_list import IngredientListFrame
@@ -38,7 +39,19 @@ def run_app():
     add_material = AddMaterialFrame(root, controller)
     add_material.pack(fill=tk.X, padx=10, pady=5)
     controller.register("add_material", add_material)
-    tk.Button(root, text="Create Manufacturing Order", command=lambda: ManufacturingOrderFrame(root, controller)).pack(pady=5)
+
+    #Go to Manufacturing order
+    # Create a larger font for the button
+    btn_font = font.Font(family="Arial", size=16, weight="bold")
+
+    tk.Button(
+        root,
+        text="Create Manufacturing Order",
+        command=lambda: ManufacturingOrderFrame(root, controller),
+        font=btn_font,
+        width=30,   # width in characters
+        height=2    # height in lines
+    ).pack(pady=10)
 
 
     # Middle section

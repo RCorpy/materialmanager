@@ -479,6 +479,8 @@ def backup_database(destination_folder=None):
     shutil.copy2(DB_NAME, backup_path)
     return backup_path
 
+
+
 def get_materials():
     conn, cursor = connect()
     cursor.execute("SELECT id, name, identifier, price FROM materials ORDER BY name")

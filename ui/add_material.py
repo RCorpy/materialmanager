@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 import database
 import os
+import shutil
 
 
 
@@ -38,18 +39,29 @@ class AddMaterialFrame(tk.LabelFrame):
         self.price_entry = tk.Entry(self, width=12, textvariable=self.price_var)
         self.price_entry.grid(row=3, column=1, sticky="w")
 
-        # --- Buttons ---
-        tk.Button(self, text="Add New Material", command=self.add_material_only).grid(
-            row=0, column=3, rowspan=2, padx=10
+        # --- Add/Update Buttons ---
+        tk.Button(self, text="Add New Material", command=self.add_material_only, width=15).grid(
+            row=0, column=3, rowspan=2, padx=10, pady=2
         )
-        tk.Button(self, text="Update Selected", command=self.update_material_only).grid(
-            row=2, column=3, rowspan=2, padx=10
+        tk.Button(self, text="Update Selected", command=self.update_material_only, width=15).grid(
+            row=2, column=3, rowspan=2, padx=10, pady=2
         )
 
-        # --- Backup Database ---
-        tk.Button(self, text="Backup Database", command=self.backup_database).grid(
-            row=0, column=4, rowspan=4, padx=20
+        # --- Backup/Restore Buttons on far right ---
+        tk.Button(self, text="Backup Database", width=15, command=self.backup_database).grid(
+            row=0, column=4, rowspan=1, padx=(50,10), pady=(5,2), sticky="n"
         )
+        tk.Button(self, text="Restore Database", width=15, command=self.restore_database).grid(
+            row=1, column=4, rowspan=1, padx=(50,10), pady=(2,5), sticky="n"
+        )
+
+        # Push right-most column to expand if window grows
+        self.grid_columnconfigure(4, weight=1)
+
+
+
+
+
 
     def load_material(self, material_id):
         material = database.get_material_by_id(material_id)
@@ -116,3 +128,25 @@ class AddMaterialFrame(tk.LabelFrame):
             messagebox.showinfo("Success", f"Database backed up to:\n{backup_path}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to backup database:\n{str(e)}")
+
+    def restore_database(self):
+        backup_file = filedialog.askopenfilename(
+            title="Select backup to restore",
+            filetypes=[("SQLite Database", "*.db")]
+        )
+        if not backup_file:
+            return
+
+        confirm = messagebox.askyesno(
+            "Confirm Restore",
+            f"This will replace the current database with:\n{os.path.basename(backup_file)}\nContinue?"
+        )
+        if not confirm:
+            return
+
+        try:
+            shutil.copy2(backup_file, database.DB_NAME)
+            messagebox.showinfo("Success", "Database restored successfully!")
+            self.controller.refresh_all_lists()  # refresh UI if needed
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to restore database:\n{e}")
