@@ -36,9 +36,12 @@ class IngredientListFrame(tk.LabelFrame):
     def refresh(self):
         filter_text = self.search_var.get() or ""
         self.listbox.delete(0, tk.END)
-        for mid, mname, identifier in database.get_materials():
+        for mid, mname, identifier, price in database.get_materials():
+            # Show only ingredients that match search text
             if filter_text.lower() in mname.lower():
-                self.listbox.insert(tk.END, f"{mid} - {mname}")
+                display_text = f"{mid} - {mname}"
+                self.listbox.insert(tk.END, display_text)
+
 
     def on_search(self, event=None):
         self.refresh()
@@ -51,6 +54,12 @@ class IngredientListFrame(tk.LabelFrame):
         ing_id, ing_name = selection.split(" - ", 1)
         self.selected_ingredient_id = int(ing_id)
         self.selected_ingredient_name = ing_name
+
+        # NEW: load this ingredient into the add_material frame
+        add_mat_frame = self.controller.frames.get("add_material")
+        if add_mat_frame:
+            add_mat_frame.load_material(self.selected_ingredient_id)
+
 
     def add_ingredient(self):
         if not self.controller.selected_product_id:

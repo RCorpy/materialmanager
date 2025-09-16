@@ -9,7 +9,9 @@ class ManufacturingOrderFrame(tk.Toplevel):
         super().__init__(parent)
         self.controller = controller
         self.title("Create Manufacturing Order")
-        self.geometry("1100x600")
+        
+        # Make fullscreen / maximized
+        self.state('zoomed')  # maximized on Windows
 
         # --- State ---
         self.selected_product_id = None
@@ -50,6 +52,20 @@ class ManufacturingOrderFrame(tk.Toplevel):
         # Order info label (shows next order id + product name)
         self.order_info_var = tk.StringVar(value="No product selected")
         tk.Label(left_frame, textvariable=self.order_info_var, font=("Arial", 10, "bold")).pack(anchor="w", pady=2)
+
+        # Invoice number
+        inv_frame = tk.Frame(left_frame)
+        inv_frame.pack(fill=tk.X, pady=4)
+        tk.Label(inv_frame, text="Invoice number:").pack(side=tk.LEFT)
+        self.invoice_entry = tk.Entry(inv_frame, width=15)
+        self.invoice_entry.pack(side=tk.LEFT, padx=6)
+
+        # Customer name
+        cust_frame = tk.Frame(left_frame)
+        cust_frame.pack(fill=tk.X, pady=4)
+        tk.Label(cust_frame, text="Customer name:").pack(side=tk.LEFT)
+        self.customer_entry = tk.Entry(cust_frame, width=25)
+        self.customer_entry.pack(side=tk.LEFT, padx=6)
 
         # Units input
         units_frame = tk.Frame(left_frame)
@@ -97,7 +113,7 @@ class ManufacturingOrderFrame(tk.Toplevel):
     def refresh_products(self):
         filter_text = self.search_var.get().lower() if self.search_var.get() else ""
         self.product_listbox.delete(0, tk.END)
-        for mid, mname, _ in database.get_materials():
+        for mid, mname, identifier, price in database.get_materials():
             if filter_text in mname.lower():
                 self.product_listbox.insert(tk.END, f"{mid} - {mname}")
 
@@ -116,7 +132,7 @@ class ManufacturingOrderFrame(tk.Toplevel):
 
         # Load per-unit formula
         formula = database.get_formulas(self.selected_product_id)
-        self.formula_table = [{"id": ing_id, "name": name, "qty": qty} for ing_id, name, qty in formula]
+        self.formula_table = [{"id": ing_id, "name": name, "qty": qty} for ing_id, name, qty, _ in formula]
 
         # Show order info (next ID + product)
         next_id = database.get_next_order_id()
@@ -129,9 +145,11 @@ class ManufacturingOrderFrame(tk.Toplevel):
     # -----------------------------
     def refresh_orders(self):
         self.orders_listbox.delete(0, tk.END)
-        for oid, pname, units, ts in database.get_orders():
+        for oid, pname, units, ts, customer_name, invoice_number in database.get_orders():
             ts_fmt = self._format_date_for_display(ts)
-            self.orders_listbox.insert(tk.END, f"{oid} - {pname} ({units} units) [{ts_fmt}]")
+            display_text = f"{oid} - {pname} ({units} units) | {customer_name or '-'} | Invoice: {invoice_number or '-'} | [{ts_fmt}]"
+            self.orders_listbox.insert(tk.END, display_text)
+
 
     def on_order_select(self, event=None):
         sel = self.orders_listbox.curselection()
@@ -141,19 +159,19 @@ class ManufacturingOrderFrame(tk.Toplevel):
         order_id, _ = selection.split(" - ", 1)
         self.selected_order_id = int(order_id)
 
-        pid, units, ingredients = database.get_order_details(self.selected_order_id)
+        pid, units, ingredients, *_ = database.get_order_details(self.selected_order_id)
         if not pid:
             return
 
         self.selected_product_id = pid
-        self.selected_product_name = database.get_material_name(pid)
+        self.selected_product_name = database.get_material_by_id(pid)
         self.units_entry.delete(0, tk.END)
         self.units_entry.insert(0, str(units))
 
         # Convert back to per-unit
         self.formula_table = [{"id": i[0], "name": i[1], "qty": i[2] / units} for i in ingredients]
 
-        self.order_info_var.set(f"Order #{self.selected_order_id} for {self.selected_product_name}")
+        self.order_info_var.set(f"Order #{self.selected_order_id}")
         self.update_tree()
 
     # -----------------------------
@@ -183,7 +201,14 @@ class ManufacturingOrderFrame(tk.Toplevel):
             messagebox.showerror("Error", "Enter a valid number of units")
             return
 
-        order_id = database.create_order(self.selected_product_id, units)
+        invoice = self.invoice_entry.get().strip()
+        customer = self.customer_entry.get().strip()
+        order_id = database.create_order(
+            self.selected_product_id,
+            units,
+            proforma_number=invoice,
+            client_name=customer
+        )
         messagebox.showinfo("Success", f"Order {order_id} saved for {self.selected_product_name}")
 
         # Refresh orders & keep window on top

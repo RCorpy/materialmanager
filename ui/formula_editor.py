@@ -13,10 +13,11 @@ class FormulaEditorFrame(tk.LabelFrame):
         ttk.Label(self, textvariable=self.title_var, font=("Arial", 12, "bold")).pack(pady=5)
 
         # Treeview
-        columns = ("ingredient", "quantity")
+        columns = ("ingredient", "quantity", "cost")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
         self.tree.heading("ingredient", text="Ingredient")
         self.tree.heading("quantity", text="Quantity")
+        self.tree.heading("cost", text="Cost (€)")
         self.tree.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Buttons row
@@ -45,13 +46,18 @@ class FormulaEditorFrame(tk.LabelFrame):
 
         # Insert updated rows
         total_qty = 0
+        total_cost = 0
         for entry in self.controller.formula_table:
             iid = str(entry["id"])
-            self.tree.insert("", "end", iid=iid, values=(entry["name"], entry["qty"]))
+            price = entry.get("price", 0.0)
+            cost = entry["qty"] * price
+            self.tree.insert("", "end", iid=iid,
+                            values=(entry["name"], entry["qty"], f"€{cost:.2f}"))
             total_qty += entry["qty"]
+            total_cost += cost
 
-        # Update total
-        self.total_var.set(f"Total quantity: {total_qty}")
+        # Update labels
+        self.total_var.set(f"Total quantity: {total_qty} | Total cost: €{total_cost:.2f}")
 
     def remove_selected(self):
         sel = self.tree.selection()

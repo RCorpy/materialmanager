@@ -29,6 +29,8 @@ def run_app():
     root = tk.Tk()
     root.title("Material Manager")
     root.geometry("900x700")
+    # Fullscreen
+    root.state('zoomed')
 
     controller = Controller(root)
 

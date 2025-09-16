@@ -25,5 +25,5 @@ class SaveBar(tk.Frame):
         messagebox.showinfo("Success", "Formula saved successfully")
         # Reload to be safe
         rows = database.get_formulas(product_id)
-        self.controller.formula_table = [{"id": r[0], "name": r[1], "qty": r[2]} for r in rows]
+        self.controller.formula_table = [{"id": r[0], "name": r[1], "qty": r[2], "price": r[3]} for r in rows]
         self.controller.frames["formula_editor"].update_display()

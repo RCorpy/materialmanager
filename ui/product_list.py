@@ -6,6 +6,7 @@ class ProductListFrame(tk.LabelFrame):
     def __init__(self, parent, controller):
         super().__init__(parent, text="Products (select to load/edit formula)", padx=8, pady=8)
         self.controller = controller
+        self.selected_product_id = None
 
         tk.Label(self, text="Search product:").pack(anchor="w")
         self.search_var = tk.StringVar()
@@ -24,7 +25,7 @@ class ProductListFrame(tk.LabelFrame):
     def refresh(self):
         filter_text = self.search_var.get() or ""
         self.listbox.delete(0, tk.END)
-        for mid, mname, identifier in database.get_materials():
+        for mid, mname, identifier, price in database.get_materials():
             if filter_text.lower() in mname.lower():
                 self.listbox.insert(tk.END, f"{mid} - {mname}")
 
@@ -43,10 +44,20 @@ class ProductListFrame(tk.LabelFrame):
 
         # Load its formula from DB
         rows = database.get_formulas(int(product_id))
-        self.controller.formula_table = [
-            {"id": r[0], "name": r[1], "qty": r[2]} for r in rows
-        ]
+        self.controller.formula_table = []
+        for r in rows:
+            ing_id, name, qty, price = r
+            self.controller.formula_table = [
+                {"id": r[0], "name": r[1], "qty": r[2], "price": r[3]} for r in rows
+            ]
+
+
 
         # Update formula editor display + title
         self.controller.frames["formula_editor"].update_display()
         self.controller.frames["formula_editor"].set_product_name(product_name)
+
+        # Load this product into the add_material frame
+        add_mat_frame = self.controller.frames.get("add_material")
+        if add_mat_frame:
+            add_mat_frame.load_material(self.controller.selected_product_id)
