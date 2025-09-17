@@ -106,9 +106,27 @@ class ManufacturingOrderFrame(tk.Toplevel):
         self.order_search_entry.bind("<KeyRelease>", self.on_order_search)
 
         tk.Label(right_frame, text="Ordenes de fabricación:").pack(anchor="w")
-        self.orders_listbox = tk.Listbox(right_frame, height=25)
-        self.orders_listbox.pack(fill=tk.BOTH, expand=True)
-        self.orders_listbox.bind("<<ListboxSelect>>", self.on_order_select)
+        columns = ("id", "product", "units", "customer", "invoice", "date")
+        self.orders_tree = ttk.Treeview(
+            right_frame, columns=columns, show="headings", height=25
+        )
+        self.orders_tree.heading("id", text="ID")
+        self.orders_tree.heading("product", text="Producto")
+        self.orders_tree.heading("units", text="Kgs")
+        self.orders_tree.heading("customer", text="Cliente")
+        self.orders_tree.heading("invoice", text="Proforma")
+        self.orders_tree.heading("date", text="Fecha")
+
+        # Ajustar tamaños de columnas (puedes tunearlos)
+        self.orders_tree.column("id", width=30, anchor="center")
+        self.orders_tree.column("product", width=310, anchor="w")
+        self.orders_tree.column("units", width=40, anchor="center")
+        self.orders_tree.column("customer", width=100, anchor="w")
+        self.orders_tree.column("invoice", width=50, anchor="center")
+        self.orders_tree.column("date", width=70, anchor="center")
+
+        self.orders_tree.pack(fill=tk.BOTH, expand=True)
+        self.orders_tree.bind("<<TreeviewSelect>>", self.on_order_select)
 
         # -----------------------------
         # Initial data
@@ -181,26 +199,31 @@ class ManufacturingOrderFrame(tk.Toplevel):
         self.populate_orders_listbox(orders)
 
     def populate_orders_listbox(self, orders):
-        self.orders_listbox.delete(0, tk.END)
+        # Ahora trabajamos con self.orders_tree
+        for row in self.orders_tree.get_children():
+            self.orders_tree.delete(row)
+
         for oid, pname, units, ts, customer_name, invoice_number in orders:
             ts_fmt = self._format_date_for_display(ts)
-            display_text = f"{oid} - {pname} ({units} units) | {customer_name or '-'} | Invoice: {invoice_number or '-'} | [{ts_fmt}]"
-            self.orders_listbox.insert(tk.END, display_text)
+            self.orders_tree.insert(
+                "", "end",
+                iid=str(oid),
+                values=(oid, pname, f"{units:.2f}", customer_name or "-", invoice_number or "-", ts_fmt)
+            )
+
 
     def on_order_select(self, event=None):
-        sel = self.orders_listbox.curselection()
+        sel = self.orders_tree.selection()
         if not sel:
             return
-        selection = self.orders_listbox.get(sel[0])
-        order_id, _ = selection.split(" - ", 1)
-        self.selected_order_id = int(order_id)
+        self.selected_order_id = int(sel[0])
 
         pid, units, ingredients, *_ = database.get_order_details(self.selected_order_id)
         if not pid:
             return
 
         self.selected_product_id = pid
-        self.selected_product_name = database.get_material_by_id(pid)
+        self.selected_product_name = database.get_material_by_id(pid)["name"]
         self.units_entry.delete(0, tk.END)
         self.units_entry.insert(0, str(units))
 
@@ -209,6 +232,7 @@ class ManufacturingOrderFrame(tk.Toplevel):
 
         self.order_info_var.set(f"Order #{self.selected_order_id}")
         self.update_tree()
+
 
     # -----------------------------
     # Update tree
