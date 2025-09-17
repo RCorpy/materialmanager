@@ -70,7 +70,8 @@ class AddMaterialFrame(tk.LabelFrame):
         self.name_var.set(material["name"])
         self.desc_var.set(material["description"] or "")
         self.identifier_var.set(material["identifier"] or "")
-        self.price_var.set(str(material["price"]))
+        price = material["price"] or 0.0
+        self.price_var.set(f"{price:.2f}")
 
     def add_material_only(self):
         name = self.name_var.get().strip()

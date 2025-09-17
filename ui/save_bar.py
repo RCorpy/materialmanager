@@ -10,7 +10,7 @@ class SaveBar(tk.Frame):
 
         tk.Button(
             self,
-            text="Guardar fórmula (sobreescribir existente)",
+            text="Guardar fórmula",
             command=self.save_formula,
             width=30
         ).pack(pady=8)

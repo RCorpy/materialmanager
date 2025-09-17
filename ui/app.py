@@ -29,7 +29,16 @@ def run_app():
     database.create_tables()
     root = tk.Tk()
     root.title("Material Manager")
-    root.geometry("900x700")
+    # --- Ajustar fuente global ---
+    default_font = font.nametofont("TkDefaultFont")
+    default_font.configure(size=11)  # cambia 11 por el tamaño que prefieras (por defecto suele ser 9 o 10)
+
+    # Aplica también a etiquetas, botones, etc.
+    root.option_add("*TButton.Font", default_font)
+    root.option_add("*TLabel.Font", default_font)
+    root.option_add("*Treeview.Font", default_font)
+    root.option_add("*Entry.Font", default_font)
+
     # Fullscreen
     root.state('zoomed')
 
