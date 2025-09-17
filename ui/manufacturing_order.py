@@ -8,7 +8,7 @@ class ManufacturingOrderFrame(tk.Toplevel):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
-        self.title("Create Manufacturing Order")
+        self.title("Crear Hoja de Fabricación")
         
         # Make fullscreen / maximized
         self.state('zoomed')  # maximized on Windows
@@ -32,7 +32,7 @@ class ManufacturingOrderFrame(tk.Toplevel):
         # -----------------------------
         # LEFT SIDE: Product + Formula
         # -----------------------------
-        tk.Label(left_frame, text="Search product (formula):").pack(anchor="w")
+        tk.Label(left_frame, text="Buscar producto (formula):").pack(anchor="w")
         self.search_var = tk.StringVar()
         self.search_entry = tk.Entry(left_frame, textvariable=self.search_var)
         self.search_entry.pack(fill=tk.X)
@@ -42,61 +42,70 @@ class ManufacturingOrderFrame(tk.Toplevel):
         self.product_listbox.pack(fill=tk.BOTH, expand=False)
         self.product_listbox.bind("<<ListboxSelect>>", self.on_product_select)
 
-        tk.Label(left_frame, text="Formula for selected product:").pack(anchor="w", pady=4)
+        tk.Label(left_frame, text="Formula del producto seleccionado:").pack(anchor="w", pady=4)
         columns = ("ingredient", "quantity")
         self.tree = ttk.Treeview(left_frame, columns=columns, show="headings", height=12)
-        self.tree.heading("ingredient", text="Ingredient")
-        self.tree.heading("quantity", text="Quantity (full)")
+        self.tree.heading("ingredient", text="Componente")
+        self.tree.heading("quantity", text="Cantidad")
         self.tree.pack(fill=tk.BOTH, expand=True)
 
         # Order info label (shows next order id + product name)
-        self.order_info_var = tk.StringVar(value="No product selected")
+        self.order_info_var = tk.StringVar(value="Ningun producto seleccionado")
         tk.Label(left_frame, textvariable=self.order_info_var, font=("Arial", 10, "bold")).pack(anchor="w", pady=2)
 
         # Invoice number
         inv_frame = tk.Frame(left_frame)
         inv_frame.pack(fill=tk.X, pady=4)
-        tk.Label(inv_frame, text="Invoice number:").pack(side=tk.LEFT)
+        tk.Label(inv_frame, text="Numero de proforma:").pack(side=tk.LEFT)
         self.invoice_entry = tk.Entry(inv_frame, width=15)
         self.invoice_entry.pack(side=tk.LEFT, padx=6)
 
         # Customer name
         cust_frame = tk.Frame(left_frame)
         cust_frame.pack(fill=tk.X, pady=4)
-        tk.Label(cust_frame, text="Customer name:").pack(side=tk.LEFT)
+        tk.Label(cust_frame, text="Cliente:").pack(side=tk.LEFT)
         self.customer_entry = tk.Entry(cust_frame, width=25)
         self.customer_entry.pack(side=tk.LEFT, padx=6)
 
         # Units input
         units_frame = tk.Frame(left_frame)
         units_frame.pack(fill=tk.X, pady=4)
-        tk.Label(units_frame, text="Units to manufacture:").pack(side=tk.LEFT)
+        tk.Label(units_frame, text="Kgs a fabricar:").pack(side=tk.LEFT)
         self.units_entry = tk.Entry(units_frame, width=10)
         self.units_entry.pack(side=tk.LEFT, padx=6)
         self.units_entry.insert(0, "1")
         self.units_entry.bind("<KeyRelease>", lambda e: self.update_tree())
 
         # Save button
-        tk.Button(left_frame, text="Save Manufacturing Order", command=self.save_order).pack(pady=6)
+        tk.Button(left_frame, text="Guardar orden de fabricación", command=self.save_order).pack(pady=6)
 
         # -----------------------------
         # RIGHT SIDE: Past Orders + Print Controls
         # -----------------------------
+
         top_right_frame = tk.Frame(right_frame)
         top_right_frame.pack(fill=tk.X, pady=4)
 
-        tk.Label(top_right_frame, text="From ID:").pack(side=tk.LEFT)
+        tk.Label(top_right_frame, text="Desde:").pack(side=tk.LEFT)
         self.from_id_entry = tk.Entry(top_right_frame, width=6)
         self.from_id_entry.pack(side=tk.LEFT, padx=2)
 
-        tk.Label(top_right_frame, text="To ID:").pack(side=tk.LEFT)
+        tk.Label(top_right_frame, text="Hasta:").pack(side=tk.LEFT)
         self.to_id_entry = tk.Entry(top_right_frame, width=6)
         self.to_id_entry.pack(side=tk.LEFT, padx=2)
 
-        tk.Button(top_right_frame, text="Print Orders", command=self.print_orders_range).pack(pady=4)
+        tk.Button(top_right_frame, text="Imprimir", command=self.print_orders_range).pack(pady=4)
 
+        # --- NEW: Search bar for orders ---
+        search_order_frame = tk.Frame(right_frame)
+        search_order_frame.pack(fill=tk.X, pady=4)
+        tk.Label(search_order_frame, text="Buscar:").pack(side=tk.LEFT)
+        self.order_search_var = tk.StringVar()
+        self.order_search_entry = tk.Entry(search_order_frame, textvariable=self.order_search_var)
+        self.order_search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.order_search_entry.bind("<KeyRelease>", self.on_order_search)
 
-        tk.Label(right_frame, text="Past Manufacturing Orders:").pack(anchor="w")
+        tk.Label(right_frame, text="Ordenes de fabricación:").pack(anchor="w")
         self.orders_listbox = tk.Listbox(right_frame, height=25)
         self.orders_listbox.pack(fill=tk.BOTH, expand=True)
         self.orders_listbox.bind("<<ListboxSelect>>", self.on_order_select)
@@ -113,9 +122,23 @@ class ManufacturingOrderFrame(tk.Toplevel):
     def refresh_products(self):
         filter_text = self.search_var.get().lower() if self.search_var.get() else ""
         self.product_listbox.delete(0, tk.END)
-        for mid, mname, identifier, price in database.get_materials():
+
+        # Only products that have a formula
+        conn, cursor = database.connect()
+        cursor.execute("""
+            SELECT DISTINCT m.id, m.name, m.identifier, m.price
+            FROM Materials m
+            JOIN Formulas f ON m.id = f.product_id
+            ORDER BY m.name
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+
+        for row in rows:
+            mid, mname, identifier, price = row
             if filter_text in mname.lower():
                 self.product_listbox.insert(tk.END, f"{mid} - {mname}")
+
 
     def on_search(self, event=None):
         self.refresh_products()
@@ -144,12 +167,25 @@ class ManufacturingOrderFrame(tk.Toplevel):
     # Orders
     # -----------------------------
     def refresh_orders(self):
+        orders = database.get_orders()
+        self.populate_orders_listbox(orders)
+
+
+    def on_order_search(self, event=None):
+        """Filter orders by invoice number or client name"""
+        query = self.order_search_var.get().strip()
+        if query:
+            orders = database.search_orders(query)
+        else:
+            orders = database.get_orders()
+        self.populate_orders_listbox(orders)
+
+    def populate_orders_listbox(self, orders):
         self.orders_listbox.delete(0, tk.END)
-        for oid, pname, units, ts, customer_name, invoice_number in database.get_orders():
+        for oid, pname, units, ts, customer_name, invoice_number in orders:
             ts_fmt = self._format_date_for_display(ts)
             display_text = f"{oid} - {pname} ({units} units) | {customer_name or '-'} | Invoice: {invoice_number or '-'} | [{ts_fmt}]"
             self.orders_listbox.insert(tk.END, display_text)
-
 
     def on_order_select(self, event=None):
         sel = self.orders_listbox.curselection()
@@ -185,7 +221,8 @@ class ManufacturingOrderFrame(tk.Toplevel):
         for item in self.tree.get_children():
             self.tree.delete(item)
         for entry in self.formula_table:
-            self.tree.insert("", "end", values=(entry["name"], entry["qty"] * units))
+            value = round(entry["qty"] * units, 3)        # redondear a 3 decimales
+            self.tree.insert("", "end", values=(entry["name"], f"{value:.3f}"))
 
     # -----------------------------
     # Save order

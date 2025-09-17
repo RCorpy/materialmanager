@@ -18,7 +18,6 @@ def print_orders(order_ids):
     width, height = A4
     margin_left = 40
     margin_right = 70
-    table_row_height = 22
 
     for order_id in order_ids:
         product_id, units, ingredients, client_name, proforma_number = database.get_order_details(order_id)
@@ -28,54 +27,54 @@ def print_orders(order_ids):
         ts = next((t for oid, pname, u, t, cl, pf in database.get_orders() if oid == order_id), "")
         ts_fmt = format_date(ts)
 
-        # Top section
+        # --- Cabecera ---
         y = height - 50
-        c.setFont("Helvetica-Bold", 24)
-        c.drawString(margin_left, y, f"Material: {product_name}")
-        c.drawRightString(width - margin_right, y, f"Units: {units}")
-        y -= 32
+        c.setFont("Helvetica-Bold", 21)
+        c.drawString(margin_left, y, f"Numero de proforma: {order_id}")
+        y -= 28
 
-        c.setFont("Helvetica", 16)
-        c.drawString(margin_left, y, f"Manufacturing Order: {order_id}")
-        c.drawRightString(width - margin_right, y, f"Date: {ts_fmt}")
-        y -= 22
+        c.setFont("Helvetica", 13)
+        c.drawString(margin_left, y, f"Cliente: {client_name or '-'}")
+        c.drawRightString(width - margin_right, y, f"Fecha: {ts_fmt}")
+        y -= 18
 
-        # Client and invoice (smaller font)
-        c.setFont("Helvetica", 12)
-        c.drawString(margin_left, y, f"Customer: {client_name or '-'}")
-        c.drawRightString(width - margin_right, y, f"Invoice #: {proforma_number or '-'}")
+        c.drawString(margin_left, y, f"Proforma: {proforma_number or '-'}")
         y -= 30
 
-        # Table header
-        c.setFont("Helvetica-Bold", 20)
-        col_id_width = 40
-        col_qty_width = 60
-        x_id_left = margin_left
-        x_id_right = width - margin_right
-        x_qty = x_id_right - col_qty_width
-        x_ingredient = x_id_left + col_id_width + 10
-        ingredient_width = x_qty - x_ingredient - 10
-
-        c.drawString(x_id_left, y, "ID")
-        c.drawString(x_ingredient, y, "Ingredient")
-        c.drawRightString(x_qty + col_qty_width / 2, y, "Qty")
-        c.drawString(x_id_right, y, "ID")
-        y -= 18
+        # --- Producto principal ---
+        c.setFont("Helvetica-Bold", 15)
+        c.line(margin_left, y, width - margin_right, y)
+        y -= 22
+        c.drawString(margin_left, y, product_name)
+        c.drawRightString(width - margin_right, y, f"Kgs: {units}")
+        y -= 22
         c.line(margin_left, y, width - margin_right, y)
         y -= 25
 
-        # Table rows
-        c.setFont("Helvetica", 17)
-        table_row_height = 30
+        # --- Cabecera tabla ---
+        c.setFont("Helvetica-Bold", 14)
+        x_descr_left = margin_left                 # Descripcion empieza desde el margen izquierdo
+        x_qty = width - margin_right - 75         # Kgs un poco a la izquierda, suficiente espacio para 6 caracteres
+        x_code_right = width - margin_right        # Codigo al final
+
+        c.drawString(x_descr_left, y, "Descripcion")
+        c.drawRightString(x_qty, y, "Kg")          # drawRightString usa la posición de la derecha
+        c.drawRightString(x_code_right, y, "Codigo")
+        y -= 16
+        c.line(margin_left, y, width - margin_right, y)
+        y -= 22
+
+        # --- Filas tabla ---
+        c.setFont("Helvetica", 14)
+        table_row_height = 24
         for ing_id, ing_name, qty in ingredients:
             identifier = next((midf for mid, mname, midf, price in database.get_materials() if mid == ing_id), "")
-            c.drawString(x_id_left, y, str(identifier))
-            c.drawString(x_ingredient, y, ing_name)
-            c.drawRightString(x_qty + col_qty_width / 2, y, f"{qty:.3f}")
-            c.drawString(x_id_right, y, str(identifier))
+            c.drawString(x_descr_left, y, ing_name)
+            c.drawRightString(x_qty, y, f"{qty:.3f}")        # Kgs
+            c.drawRightString(x_code_right, y, str(identifier))  # Codigo
             y -= table_row_height
 
-            if y < 50:
+            if y < 60:
                 c.showPage()
                 y = height - 50
 
@@ -83,7 +82,6 @@ def print_orders(order_ids):
 
     c.save()
     os.startfile(pdf_path, "open")
-
 
 
 def format_date(ts):

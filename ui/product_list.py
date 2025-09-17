@@ -4,11 +4,11 @@ import database
 
 class ProductListFrame(tk.LabelFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, text="Products (select to load/edit formula)", padx=8, pady=8)
+        super().__init__(parent, text="Productos (selecciona para cargar/editar la formula)", padx=8, pady=8)
         self.controller = controller
         self.selected_product_id = None
 
-        tk.Label(self, text="Search product:").pack(anchor="w")
+        tk.Label(self, text="Buscar producto:").pack(anchor="w")
         self.search_var = tk.StringVar()
         self.search_entry = tk.Entry(self, textvariable=self.search_var)
         self.search_entry.pack(fill=tk.X)

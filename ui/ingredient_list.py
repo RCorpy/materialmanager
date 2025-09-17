@@ -5,12 +5,12 @@ import database
 
 class IngredientListFrame(tk.LabelFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, text="Ingredients (search + select)", padx=8, pady=8)
+        super().__init__(parent, text="Ingredientes (buscar + seleccionar)", padx=8, pady=8)
         self.controller = controller
         self.selected_ingredient_id = None
         self.selected_ingredient_name = None
 
-        tk.Label(self, text="Search ingredient:").pack(anchor="w")
+        tk.Label(self, text="Buscar Ingrediente:").pack(anchor="w")
         self.search_var = tk.StringVar()
         self.search_entry = tk.Entry(self, textvariable=self.search_var)
         self.search_entry.pack(fill=tk.X)
@@ -26,12 +26,12 @@ class IngredientListFrame(tk.LabelFrame):
 
         qty_frame = tk.Frame(self)
         qty_frame.pack(fill=tk.X, pady=6)
-        tk.Label(qty_frame, text="Quantity:").pack(side=tk.LEFT)
+        tk.Label(qty_frame, text="Cantidad:").pack(side=tk.LEFT)
         self.qty_entry = tk.Entry(qty_frame, width=12)
         self.qty_entry.pack(side=tk.LEFT, padx=6)
         self.qty_entry.insert(0, "0.0")
 
-        tk.Button(self, text="Add / Update Ingredient", command=self.add_ingredient).pack(pady=4)
+        tk.Button(self, text="Añadir / Modificar Ingrediente", command=self.add_ingredient).pack(pady=4)
 
     def refresh(self):
         filter_text = self.search_var.get() or ""
@@ -63,15 +63,15 @@ class IngredientListFrame(tk.LabelFrame):
 
     def add_ingredient(self):
         if not self.controller.selected_product_id:
-            messagebox.showerror("Error", "Select a product first")
+            messagebox.showerror("Error", "Selecciona un producto primero")
             return
         if not self.selected_ingredient_id:
-            messagebox.showerror("Error", "Select an ingredient first")
+            messagebox.showerror("Error", "Selecciona un ingrediente primero")
             return
         try:
             qty = float(self.qty_entry.get().strip())
         except ValueError:
-            messagebox.showerror("Error", "Enter a valid numeric quantity")
+            messagebox.showerror("Error", "Introduce un número valido para la cantidad.")
             return
 
         # Update if ingredient already exists in formula

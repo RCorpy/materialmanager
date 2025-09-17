@@ -46,7 +46,7 @@ def run_app():
 
     tk.Button(
         root,
-        text="Create Manufacturing Order",
+        text="Hojas de fabricación",
         command=lambda: ManufacturingOrderFrame(root, controller),
         font=btn_font,
         width=30,   # width in characters
