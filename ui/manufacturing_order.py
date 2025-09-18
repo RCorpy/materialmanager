@@ -155,7 +155,8 @@ class ManufacturingOrderFrame(tk.Toplevel):
         for row in rows:
             mid, mname, identifier, price = row
             if filter_text in mname.lower():
-                self.product_listbox.insert(tk.END, f"{mid} - {mname}")
+                # Solo mostrar el nombre, no el ID
+                self.product_listbox.insert(tk.END, mname)
 
 
     def on_search(self, event=None):
@@ -165,10 +166,13 @@ class ManufacturingOrderFrame(tk.Toplevel):
         sel = self.product_listbox.curselection()
         if not sel:
             return
-        selection = self.product_listbox.get(sel[0])
-        product_id, product_name = selection.split(" - ", 1)
+        product_name = self.product_listbox.get(sel[0])
 
-        self.selected_product_id = int(product_id)
+        # Buscar id en la base de datos usando el nombre
+        product = database.get_material_by_name(product_name)
+        if not product:
+            return
+        self.selected_product_id = product["id"]
         self.selected_product_name = product_name
 
         # Load per-unit formula

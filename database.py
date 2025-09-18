@@ -130,6 +130,14 @@ def add_material(name, description="", identifier=None, price=0.0):
 
 
 
+def get_material_by_name(name):
+    conn, cursor = connect()
+    cursor.execute("SELECT id, name FROM Materials WHERE name = ?", (name,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"id": row[0], "name": row[1]}
+    return None
 
 def get_material_by_id(material_id):
     """Return dict-like row or None for given material id."""
