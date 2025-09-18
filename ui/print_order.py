@@ -30,7 +30,7 @@ def print_orders(order_ids):
         # --- Cabecera ---
         y = height - 50
         c.setFont("Helvetica-Bold", 21)
-        c.drawString(margin_left, y, f"Numero de proforma: {order_id}")
+        c.drawString(margin_left, y, f"Orden de fabricación: {order_id}")
         y -= 28
 
         c.setFont("Helvetica", 13)
