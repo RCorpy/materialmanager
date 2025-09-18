@@ -38,12 +38,15 @@ class AddMaterialFrame(tk.LabelFrame):
         self.price_entry = tk.Entry(self, width=12, textvariable=self.price_var)
         self.price_entry.grid(row=3, column=1, sticky="w")
 
-        # --- Add/Update Buttons ---
+        # --- Add/Update/Clone Buttons ---
         tk.Button(self, text="Añadir Material", command=self.add_material_only, width=15).grid(
             row=0, column=3, rowspan=2, padx=10, pady=2
         )
         tk.Button(self, text="Modificar", command=self.update_material_only, width=15).grid(
             row=2, column=3, rowspan=2, padx=10, pady=2
+        )
+        tk.Button(self, text="Clonar Material", command=self.clone_material, width=15).grid(
+            row=4, column=3, rowspan=2, padx=10, pady=2
         )
 
         # --- Backup/Restore Buttons on far right ---
@@ -150,3 +153,54 @@ class AddMaterialFrame(tk.LabelFrame):
             self.controller.refresh_all_lists()  # refresh UI if needed
         except Exception as e:
             messagebox.showerror("Error", f"Failed to restore database:\n{e}")
+
+
+    def clone_material(self):
+        if not self.selected_material_id:
+            messagebox.showerror("Error", "Selecciona un material para clonar")
+            return
+
+        # Obtener material original
+        material = database.get_material_by_id(self.selected_material_id)
+        if not material:
+            messagebox.showerror("Error", "No se encontró el material a clonar")
+            return
+
+        # Preparar datos del clon
+        new_name = material["name"] + " - Copia"
+        new_desc = material["description"] or ""
+        new_price = material["price"] or 0.0
+
+        # El identificador lo ponemos None para que no choque con el original
+        ok = database.add_material(new_name, description=new_desc, identifier=None, price=new_price)
+        if not ok:
+            messagebox.showerror("Error", "No se pudo crear el material clonado (nombre o identificador duplicado)")
+            return
+
+        # Recuperar el id del material recién insertado
+        conn, cursor = database.connect()
+        cursor.execute("SELECT id FROM Materials WHERE name = ?", (new_name,))
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            messagebox.showerror("Error", "Error al recuperar el id del material clonado")
+            return
+        new_material_id = row[0]
+
+        # Copiar también la fórmula asociada
+        formulas = database.get_formulas(self.selected_material_id)
+        if formulas:
+            conn, cursor = database.connect()
+            for row in formulas:
+                ing_id = row[0]   # id del ingrediente
+                qty = row[2]      # cantidad
+                cursor.execute(
+                    "INSERT INTO Formulas (product_id, ingredient_id, quantity) VALUES (?, ?, ?)",
+                    (new_material_id, ing_id, qty)
+                )
+            conn.commit()
+            conn.close()
+
+
+        messagebox.showinfo("Clonado", f"Material '{new_name}' creado como copia de '{material['name']}'")
+        self.controller.refresh_all_lists()

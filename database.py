@@ -75,29 +75,61 @@ def create_tables():
 # ------------------------
 # --- Materials CRUD -----
 # ------------------------
+
+def generate_unique_identifier(base_identifier, cursor):
+    """
+    Dado un identificador base, añade sufijos -1, -2, etc. hasta encontrar uno libre.
+    """
+    if base_identifier is None:
+        return None
+
+    new_identifier = str(base_identifier)
+    suffix = 1
+    # mientras exista en BD, añadir sufijo
+    while cursor.execute("SELECT 1 FROM Materials WHERE identifier = ?", (new_identifier,)).fetchone():
+        new_identifier = f"{base_identifier}-{suffix}"
+        suffix += 1
+    return new_identifier
+
+
 def add_material(name, description="", identifier=None, price=0.0):
     """
-    Add a new material.
-    If identifier is None, it will be defaulted to the auto-increment id after insert.
+    Añade un nuevo material con identificador único.
     """
     conn, cursor = connect()
     try:
+        # Si se da un identificador, asegurar que sea único
+        final_identifier = None
+        if identifier:
+            final_identifier = generate_unique_identifier(identifier, cursor)
+
+        # Intento de inserción
         cursor.execute(
             "INSERT INTO Materials (name, description, identifier, price) VALUES (?, ?, ?, ?)",
-            (name, description, identifier, float(price))
+            (name, description, final_identifier, float(price))
         )
         material_id = cursor.lastrowid
-        if not identifier:
+
+        # Si no se pasó identificador, lo generamos con el propio id
+        if not final_identifier:
+            final_identifier = str(material_id)
+            final_identifier = generate_unique_identifier(final_identifier, cursor)
             cursor.execute(
                 "UPDATE Materials SET identifier = ? WHERE id = ?",
-                (str(material_id), material_id)
+                (final_identifier, material_id)
             )
+
         conn.commit()
         return True
-    except sqlite3.IntegrityError:
+
+    except Exception as e:
+        print("Error en add_material:", e)
         return False
     finally:
         conn.close()
+
+
+
 
 def get_material_by_id(material_id):
     """Return dict-like row or None for given material id."""
