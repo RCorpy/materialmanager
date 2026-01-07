@@ -116,7 +116,7 @@ def print_orders(order_ids):
                 c.line(margin_left, y, width - margin_right, y)
                 y -= 22
                 c.drawString(margin_left, y, f"{comp_name}")
-                c.drawRightString(width - margin_right, y, f"Kgs: {comp_qty}")
+                c.drawRightString(width - margin_right, y, f"Kgs: {comp_qty:.3f}")
                 y -= 22
                 c.line(margin_left, y, width - margin_right, y)
                 y -= 25
