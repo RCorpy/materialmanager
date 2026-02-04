@@ -3,6 +3,8 @@ from tkinter import ttk, messagebox
 import database
 from datetime import datetime
 from ui.print_order import print_orders  # note the plural
+from sync import sync_with_server
+
 
 class ManufacturingOrderFrame(tk.Toplevel):
     def __init__(self, parent, controller):
@@ -95,6 +97,12 @@ class ManufacturingOrderFrame(tk.Toplevel):
         self.to_id_entry.pack(side=tk.LEFT, padx=2)
 
         tk.Button(top_right_frame, text="Imprimir", command=self.print_orders_range).pack(pady=4)
+        tk.Button(
+            top_right_frame,
+            text="Sincronizar",
+            command=self.sync_database
+        ).pack(pady=4, padx=5)
+
 
         # --- NEW: Search bar for orders ---
         search_order_frame = tk.Frame(right_frame)
@@ -365,3 +373,10 @@ class ManufacturingOrderFrame(tk.Toplevel):
         if isinstance(ts, str) and " " in ts:
             return ts.split(" ")[0].replace("-", "/")  # still make it readable
         return str(ts)
+
+    def sync_database(self):
+        try:
+            sync_with_server()
+            messagebox.showinfo("Sincronización", "Sincronización completada correctamente")
+        except Exception as e:
+            messagebox.showerror("Error de sincronización", str(e))

@@ -527,3 +527,42 @@ def get_materials():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def get_orders_after_id(last_id):
+    conn, cursor = connect()
+
+    cursor.execute("""
+        SELECT order_id, product_id, units, date, notes, client_name, proforma_number
+        FROM manufacturing_orders
+        WHERE order_id > ?
+        ORDER BY order_id
+    """, (last_id,))
+    orders = cursor.fetchall()
+
+    result = []
+    for o in orders:
+        cursor.execute("""
+            SELECT ingredient_id, quantity
+            FROM order_ingredients
+            WHERE order_id = ?
+        """, (o["order_id"],))
+
+        ingredients = [
+            {"ingredient_id": r["ingredient_id"], "quantity": r["quantity"]}
+            for r in cursor.fetchall()
+        ]
+
+        result.append({
+            "order_id": o["order_id"],
+            "product_id": o["product_id"],
+            "units": o["units"],
+            "date": o["date"],
+            "notes": o["notes"],
+            "client_name": o["client_name"],
+            "proforma_number": o["proforma_number"],
+            "ingredients": ingredients
+        })
+
+    conn.close()
+    return result
