@@ -3,6 +3,8 @@ import subprocess
 import paramiko
 import database
 import os
+from dotenv import load_dotenv
+
 load_dotenv()
 
 SERVER = os.getenv("SYNC_SERVER")
