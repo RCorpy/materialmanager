@@ -2,10 +2,14 @@ import json
 import subprocess
 import paramiko
 import database
+import os
+load_dotenv()
 
-SERVER = "95.217.233.118"
-USER = "myuser"
-PORT = 22
+SERVER = os.getenv("SYNC_SERVER")
+USER = os.getenv("SYNC_USER")
+REMOTE_DB = os.getenv("SYNC_DB_PATH")
+
+KEY_PATH = os.path.expanduser(r"~\.ssh\id_ed25519")
 
 REMOTE_GET_LAST = "/home/myuser/sync_server/get_last_order_id.py"
 REMOTE_INSERT = "/home/myuser/sync_server/insert_orders.py"
@@ -14,7 +18,12 @@ REMOTE_INSERT = "/home/myuser/sync_server/insert_orders.py"
 def sync_with_server():
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(SERVER, port=PORT, username=USER)
+    ssh.connect(
+    SERVER,
+    port=22,
+    username="myuser",
+    key_filename=KEY_PATH,
+)
 
     # 1️⃣ Obtener último order_id del servidor
     stdin, stdout, stderr = ssh.exec_command(f"python3 {REMOTE_GET_LAST}")
