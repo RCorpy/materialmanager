@@ -378,5 +378,6 @@ class ManufacturingOrderFrame(tk.Toplevel):
         try:
             sync_with_server()
             messagebox.showinfo("Sincronización", "Sincronización completada correctamente")
+            self.destroy()
         except Exception as e:
             messagebox.showerror("Error de sincronización", str(e))
