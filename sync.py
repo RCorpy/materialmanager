@@ -1,7 +1,4 @@
-# sync.py
-import json
 import paramiko
-import database
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -9,83 +6,81 @@ from datetime import datetime
 load_dotenv()
 
 SERVER = os.getenv("SYNC_SERVER")
-USER = os.getenv("SYNC_USER")
+USERNAME = os.getenv("SYNC_USER")
+LOCAL_DB = os.getenv("LOCAL_DB_PATH")
 REMOTE_DB = os.getenv("SYNC_DB_PATH")
 
 KEY_PATH = os.path.expanduser(r"~\.ssh\id_ed25519")
 
-REMOTE_GET_LAST = "/home/myuser/sync_server/get_last_order_id.py"
-REMOTE_INSERT = "/home/myuser/sync_server/insert_orders.py"
 
-LOCAL_DB = "materials.db"  # Ajusta si tu ruta es distinta
-
-
-def get_local_max_id():
-    conn, cursor = database.connect()
-    cursor.execute("SELECT MAX(order_id) FROM manufacturing_orders")
-    result = cursor.fetchone()[0]
-    conn.close()
-    return result or 0
-
-
-def download_remote_db(ssh):
-    sftp = ssh.open_sftp()
-    sftp.get(REMOTE_DB, LOCAL_DB)
-    sftp.close()
-
-
-
-def upload_missing_orders(ssh, server_last_id):
-    orders = database.get_orders_after_id(server_last_id)
-
-    print("ORDERS TO SEND:", orders)
-
-    if not orders:
-        return "Nada que subir"
-
-    payload = json.dumps({"orders": orders})
-
-    cmd = f"python3 {REMOTE_INSERT}"
-    stdin, stdout, stderr = ssh.exec_command(cmd)
-    stdin.write(payload)
-    stdin.channel.shutdown_write()
-
-    return stdout.read().decode().strip()
-
-
-def sync_with_server():
-
+def _connect():
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(
-        hostname=SERVER,
-        username=USER,
+        SERVER,
+        port=22,
+        username=USERNAME,
         key_filename=KEY_PATH,
-        look_for_keys=False,
-        allow_agent=False,
     )
+    return ssh
 
-    # 🔹 Obtener último ID del servidor
-    stdin, stdout, stderr = ssh.exec_command(f"python3 {REMOTE_GET_LAST}")
-    server_last_id = int(stdout.read().decode().strip() or 0)
 
-    # 🔹 Obtener último ID local
-    local_last_id = get_local_max_id()
+def sync_on_startup():
+    """
+    Solo descarga si el servidor es más reciente.
+    Nunca sube automáticamente.
+    """
+    print("SHOULD BE SYNCING ON STARTUP")
+    ssh = _connect()
+    sftp = ssh.open_sftp()
 
-    # 🔥 CASO 1: LOCAL tiene más datos → subir
-    if local_last_id > server_last_id:
-        result = upload_missing_orders(ssh, server_last_id)
-
+    if not os.path.exists(LOCAL_DB):
+        # Si no existe local, descargar directamente
+        sftp.get(REMOTE_DB, LOCAL_DB)
+        sftp.close()
         ssh.close()
-        return f"Subido al servidor. {result}"
+        return "Base descargada (no existía local)."
 
-    # 🔥 CASO 2: SERVIDOR tiene más datos → descargar y reemplazar
-    elif server_last_id > local_last_id:
-        download_remote_db(ssh)
-        ssh.close()
-        return "Base local reemplazada desde el servidor."
+    local_mtime = os.path.getmtime(LOCAL_DB)
+    remote_mtime = sftp.stat(REMOTE_DB).st_mtime
 
-    # 🔹 CASO 3: iguales
+    if remote_mtime > local_mtime:
+        sftp.get(REMOTE_DB, LOCAL_DB)
+        result = "Base actualizada desde el servidor."
     else:
-        ssh.close()
-        return "Bases ya sincronizadas."
+        result = "Base local ya actualizada."
+
+    sftp.close()
+    ssh.close()
+    return result
+
+
+def sync_with_server():
+    """
+    Sincronización manual completa.
+    Sube o baja según cuál sea más reciente.
+    """
+    ssh = _connect()
+    sftp = ssh.open_sftp()
+
+    local_mtime = os.path.getmtime(LOCAL_DB)
+    remote_mtime = sftp.stat(REMOTE_DB).st_mtime
+
+    # 🔥 Local más reciente → SUBIR
+    if local_mtime > remote_mtime:
+        # Backup remoto antes de sobrescribir
+        ssh.exec_command("python3 /home/myuser/sync_server/backup.py")
+        sftp.put(LOCAL_DB, REMOTE_DB)
+        result = "Base de datos subida al servidor."
+
+    # 🔥 Servidor más reciente → DESCARGAR
+    elif remote_mtime > local_mtime:
+        sftp.get(REMOTE_DB, LOCAL_DB)
+        result = "Base de datos actualizada desde el servidor."
+
+    else:
+        result = "Bases ya sincronizadas."
+
+    sftp.close()
+    ssh.close()
+    return result
